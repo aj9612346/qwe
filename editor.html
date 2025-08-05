@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Content Editable with Macros</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .macro-buttons-panel {
+            flex: 0 0 250px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            min-height: 400px;
+            overflow-y: hidden;
+        }
+
+        .macro-search-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .macro-search-input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            transition: border-color 0.2s ease;
+            padding-right: 30px; /* Пространство для кнопки очистки */
+        }
+
+        .macro-search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .clear-search-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-75%);
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            color: #95a5a6;
+            cursor: pointer;
+            display: none; /* По умолчанию скрыто */
+            padding: 0;
+            line-height: 1;
+        }
+
+        .clear-search-button:hover {
+            color: #7f8c8d;
+        }
+
+        .macro-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .macro-params-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: none;
+            flex-direction: column;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .macro-params-panel.active {
+            display: flex;
+        }
+        
+        .macro-params-panel h3 {
+            margin-top: 0;
+            color: #34495e;
+            font-size: 1.2em;
+        }
+        
+        .macro-params-panel .description {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        
+        .macro-params-panel .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .macro-params-panel label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .macro-params-panel input[type="text"],
+        .macro-params-panel input[type="number"],
+        .macro-params-panel input[type="date"],
+        .macro-params-panel select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .macro-params-panel input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .date-offset-fields { /* New class for the flex container of offset/unit */
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .date-offset-fields input[type="number"] {
+            flex-grow: 1;
+        }
+
+        .date-offset-fields select {
+            width: auto;
+        }
+        
+        .panel-content-wrapper {
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .macro-params-panel .button-group {
+            display: flex;
+            gap: 10px;
+            padding-top: 10px;
+            align-items: center;
+        }
+        
+        .macro-params-panel .button-group button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+        
+        .macro-params-panel .button-group .close-button {
+            background-color: #34495e;
+            color: white;
+        }
+        
+        .macro-params-panel .button-group .close-button:hover {
+            background-color: #2c3e50;
+        }
+        
+        .macro-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .macro-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+        .macro-button:active {
+            transform: translateY(0);
+        }
+
+        .editor-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .editable-div {
+            border: 1px solid #bdc3c7;
+            padding: 15px;
+            min-height: 250px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            outline: none;
+            font-size: 1.1em;
+            line-height: 1.6;
+            border-radius: 8px;
+            background-color: #fdfdfd;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+            resize: vertical;
+            overflow-y: auto;
+        }
+
+        .macro {
+            display: inline-block;
+            padding: 2px 6px; /* Default padding */
+            margin: 0 1px;
+            border: 1px solid #b7c0c7;
+            border-radius: 4px;
+            font-weight: normal;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            caret-color: transparent;
+            box-sizing: border-box; /* Crucial for consistent sizing */
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+            transition: all 0.1s ease-in-out;
+            position: relative;
+            font-size: 0.9em;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+        
+        /* Более яркая подсветка для активного макроса */
+        .macro.active {
+            border: 1px solid #3498db; /* Keep original border thickness */
+            outline: 1px solid #3498db; /* Add an outline for visual highlight */
+            outline-offset: 1px; /* Offset it slightly so it doesn't overlap border */
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.9); /* Более выраженная тень */
+            background-color: #dbeaf5; /* Чуть более яркий фон */
+            padding: 2px 6px; /* Keep original padding */
+        }
+
+        .macro.active:hover {
+            background-color: #cce0f0; /* Сохраняем изменение цвета при наведении */
+        }
+        
+        .macro.dragging {
+            opacity: 0.5;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .delete-macro-icon {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 18px;
+            height: 18px;
+            background-color: #fff;
+            border: 1px solid #bdc3c7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            line-height: 1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 100;
+        }
+        
+        .macro.active .delete-macro-icon {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .delete-macro-icon:hover {
+            background-color: #e74c3c;
+            border-color: #c0392b;
+        }
+
+        .delete-macro-icon:hover svg {
+            fill: white;
+        }
+        
+        .delete-macro-icon svg {
+            width: 10px;
+            height: 10px;
+            fill: #7f8c8d;
+            transition: fill 0.2s ease;
+        }
+
+        .macro:hover {
+            background-color: #e0e6e8;
+        }
+        
+        /* Визуальный индикатор вставки */
+        .drop-target {
+            background-color: rgba(52, 152, 219, 0.8);
+            width: 2px; 
+            position: fixed; 
+            height: 1.6em;
+            display: none;
+            pointer-events: none;
+            z-index: 1000;
+            margin-top: 1px;
+            transition: none;
+        }
+        
+        .editor-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dynamic-input-container {
+            margin-bottom: 10px;
+        }
+
+        .dynamic-input-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .dynamic-input-item input {
+            flex-grow: 1;
+            margin-bottom: 0 !important;
+        }
+        
+        .dynamic-input-item .remove-button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-left: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .dynamic-input-item .remove-button:hover {
+            background: #c0392b;
+        }
+
+        .add-item-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .add-item-button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        
+        .add-item-button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .output-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .output-panel h3 {
+            margin-top: 0;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .output-panel pre {
+            background-color: #fdfdfd;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+        
+        .preview-box {
+            background-color: #fff;
+            border: 1px solid #bdc3c7;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 1em;
+            color: #2c3e50;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+        }
+
+        .common-formats-container {
+            margin-top: 15px;
+        }
+
+        .format-button {
+            background-color: #bdc3c7;
+            color: #34495e;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .format-button:hover {
+            background-color: #95a5a6;
+        }
+        
+        .format-buttons-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Ваш Текстовый Редактор с Макросами</h1>
+
+    <div class="container">
+        <div class="editor-wrapper">
+            <div id="editableContent" class="editable-div" contenteditable="true"></div>
+        </div>
+        
+        <div class="macro-buttons-panel" id="macroButtonsPanel">
+            <div class="macro-search-wrapper">
+                <input type="text" id="macroSearchInput" class="macro-search-input" placeholder="Поиск макросов...">
+                <button type="button" id="clearSearchButton" class="clear-search-button">
+                    &times;
+                </button>
+            </div>
+            <div id="macroButtonsContainer" class="macro-buttons-container"></div>
+            <div id="macroParamsPanel" class="macro-params-panel">
+                <h3 id="panelTitle"></h3>
+                <p id="panelDescription" class="description"></p>
+                <div id="panelContentWrapper" class="panel-content-wrapper">
+                    <div id="panelInputContainer">
+                    </div>
+                </div>
+                <div id="panelButtonGroup" class="button-group">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="output-panel">
+        <h3>Полученный чистый текст:</h3>
+        <pre id="cleanTextOutput"></pre>
+        <h3>Полученные макросы (JSON):</h3>
+        <pre id="macrosOutput"></pre>
+    </div>
+    <!-- Визуальный индикатор вставки -->
+    <div id="dropTarget" class="drop-target"></div>
+
+    <script>
+        // --- Глобальные переменные и настройки ---
+        const editableDiv = document.getElementById('editableContent');
+        const macroButtonsPanel = document.getElementById('macroButtonsPanel');
+        const macroButtonsContainer = document.getElementById('macroButtonsContainer');
+        const macroSearchInput = document.getElementById('macroSearchInput');
+        const clearSearchButton = document.getElementById('clearSearchButton');
+        const macroParamsPanel = document.getElementById('macroParamsPanel');
+        const panelTitle = document.getElementById('panelTitle');
+        const panelDescription = document.getElementById('panelDescription');
+        const panelInputContainer = document.getElementById('panelInputContainer');
+        const panelButtonGroup = document.getElementById('panelButtonGroup');
+        const cleanTextOutput = document.getElementById('cleanTextOutput');
+        const macrosOutput = document.getElementById('macrosOutput');
+        const dropTarget = document.getElementById('dropTarget');
+        
+        let draggedMacro = null;
+        let dragInProgress = false;
+
+        // --- UNDO/REDO PATCH START ---
+        let historyStack = [];
+        let historyIndex = -1;
+        let isRestoringFromHistory = false;
+        const MAX_HISTORY = 50;
+        function getNodePath(node) {
+            let path = [];
+            while (node && node !== editableDiv) {
+                let i = 0, sib = node;
+                while ((sib = sib.previousSibling)) i++;
+                path.unshift(i);
+                node = node.parentNode;
+            }
+            return path;
+        }
+        function getNodeByPath(path) {
+            let node = editableDiv;
+            for (let idx of path) {
+                if (!node.childNodes[idx]) return node;
+                node = node.childNodes[idx];
+            }
+            return node;
+        }
+        function saveHistory() {
+            if (isRestoringFromHistory) return;
+            const html = editableDiv.innerHTML;
+            const selection = window.getSelection();
+            let selInfo = null;
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                selInfo = {
+                    startContainerPath: getNodePath(range.startContainer),
+                    startOffset: range.startOffset,
+                    endContainerPath: getNodePath(range.endContainer),
+                    endOffset: range.endOffset
+                };
+            }
+            if (historyStack.length === 0 || historyStack[historyIndex]?.html !== html) {
+                historyStack = historyStack.slice(0, historyIndex + 1);
+                historyStack.push({ html, selInfo });
+                if (historyStack.length > MAX_HISTORY) {
+                    historyStack.shift();
+                } else {
+                    historyIndex++;
+                }
+            }
+        }
+        function restoreHistory(index) {
+            if (index < 0 || index >= historyStack.length) return;
+            isRestoringFromHistory = true;
+            const { html, selInfo } = historyStack[index];
+            editableDiv.innerHTML = html;
+            if (selInfo) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                const range = document.createRange();
+                const startNode = getNodeByPath(selInfo.startContainerPath);
+                const endNode = getNodeByPath(selInfo.endContainerPath);
+                if (startNode && endNode) {
+                    range.setStart(startNode, Math.min(selInfo.startOffset, startNode.length || 0));
+                    range.setEnd(endNode, Math.min(selInfo.endOffset, endNode.length || 0));
+                    selection.addRange(range);
+                }
+            }
+            updateOutput();
+            isRestoringFromHistory = false;
+        }
+        // --- UNDO/REDO PATCH END ---
+
+        // Определение доступных макросов с их дефолтными значениями
+        const availableMacros = [
+            { type: 'lastname', display: 'Фамилия', description: 'Вставляет фамилию клиента.', parameterized: false, styles: { backgroundColor: '#e8f5fd', color: '#2c3e50' } },
+            { type: 'firstname', display: 'Имя', description: 'Вставляет имя клиента.', parameterized: false, styles: { backgroundColor: '#e8f5fd', color: '#2c3e50' } },
+            /* Убран макрос 'Страна' */
+            { type: 'random', display: 'Случайное число', description: 'Вставляет случайное число в заданном диапазоне.', parameterized: true, params: [{ name: 'min', label: 'Минимум', type: 'number', default: 1 }, { name: 'max', label: 'Максимум', type: 'number', default: 100 }], styles: { backgroundColor: '#f1f8e9', color: '#33691e' } },
+            { type: 'shuffle', display: 'Перемешать', description: 'Перемешивает введенные элементы.', parameterized: true, params: [{ name: 'items', label: 'Элементы', type: 'list', default: ['a', 'b', 'c'] }], styles: { backgroundColor: '#fff8e1', color: '#ff6f00' } },
+            { type: 'random_value', display: 'Случайное значение', description: 'Выбирает случайное значение из списка.', parameterized: true, params: [{ name: 'items', label: 'Значения', type: 'list', default: ['A', 'B', 'C'] }], styles: { backgroundColor: '#fbe9e7', color: '#bf360c' } },
+            { type: 'cursor', display: 'КУРСОР', description: 'Отмечает местоположение курсора.', isUnique: true, parameterized: false, styles: { backgroundColor: '#fbc02d', color: '#fff', fontWeight: 'bold' } },
+            { 
+                type: 'datetime', 
+                display: 'ДАТА_ВРЕМЯ', 
+                description: 'Вставляет текущую дату и/или время с возможностью смещения.', 
+                parameterized: true, 
+                params: [
+                    { name: 'format', label: 'Формат', type: 'text', default: 'DD.MM.YYYY HH:mm' },
+                    { name: 'offset', label: 'Смещение', type: 'number', default: 0 },
+                    { name: 'unit', label: 'Единица измерения', type: 'select', options: ['секунды', 'минуты', 'часы', 'дни'], default: 'дни' }
+                ],
+                styles: { backgroundColor: '#e0f7fa', color: '#006064' } 
+            },
+            { type: 'text_field', display: 'Текстовое поле', description: 'Вставляет текстовое поле со значением по умолчанию.', parameterized: true, params: [{ name: 'default_value', label: 'Значение по умолчанию', type: 'text', default: '' }], styles: { backgroundColor: '#f3e5f5', color: '#6a1b9a' } },
+            { 
+                type: 'dropdown', 
+                display: 'Выпадающий список', 
+                description: 'Вставляет выпадающий список с заданными вариантами.', 
+                parameterized: true, 
+                params: [
+                    { name: 'items', label: 'Варианты', type: 'list', default: ['Вариант 1', 'Вариант 2'] },
+                    { name: 'multiple', label: 'Можно выбирать несколько значений', type: 'checkbox', default: false }
+                ], 
+                styles: { backgroundColor: '#e8f5e9', color: '#2e7d32' } 
+            },
+            { 
+                type: 'date_picker', 
+                display: 'Выбор даты', 
+                description: 'Вставляет поле выбора даты с настраиваемым форматом и диапазоном.', 
+                parameterized: true, 
+                params: [
+                    { name: 'display_format', label: 'Формат отображения', type: 'text', default: 'DD.MM.YYYY' },
+                    { name: 'start_date', label: 'Начальная дата', type: 'date', default: '' },
+                    { name: 'end_date', label: 'Конечная дата', type: 'date', default: '' }
+                ],
+                styles: { backgroundColor: '#ffe0b2', color: '#e65100' } 
+            },
+        ];
+
+        // Обновленный initialText для корректного парсинга макросов
+        let initialText = "Привет, это демонстрация редактора.\nВот тут должно быть [[lastname]].\nА здесь [[firstname]].\n\nИ еще случайное число: [[random:min:1,max:10]]\n\nСегодня [[datetime:format:DD.MM.YYYY HH:mm,offset:0,unit:дни]]\nЗавтра в это же время: [[datetime:format:DD.MM.YYYY HH:mm,offset:1,unit:дни]]\nВремя через 5 часов: [[datetime:format:HH:mm,offset:5,unit:часы]]\n\nСписок для перемешивания: [[shuffle:items:Элемент1,Элемент2,Элемент3]]\nСлучайное значение из списка: [[random_value:items:ЗначениеX,ЗначениеY]]\nВыпадающий список: [[dropdown:items:ОпцияА,ОпцияБ,ОпцияВ,multiple:true]]";
+        // initialMacrosData теперь менее критичен, если параметры встроены в initialText,
+        // но может использоваться как источник дефолтных значений, если в тексте их нет.
+        let initialMacrosData = [
+            { type: 'lastname', params: {} },
+            { type: 'firstname', params: {} },
+            { type: 'random', params: { min: 1, max: 10 } },
+            { type: 'datetime', params: { format: 'DD.MM.YYYY HH:mm', offset: 0, unit: 'дни' } },
+            { type: 'datetime', params: { format: 'DD.MM.YYYY HH:mm', offset: 1, unit: 'дни' } },
+            { type: 'datetime', params: { format: 'HH:mm', offset: 5, unit: 'часы' } },
+            { type: 'shuffle', params: { items: ['Элемент1', 'Элемент2', 'Элемент3'] } },
+            { type: 'random_value', params: { items: ['ЗначениеX', 'ЗначениеY'] } },
+            { type: 'dropdown', params: { items: ['ОпцияА', 'ОпцияБ', 'ОпцияВ'], multiple: true } },
+        ];
+
+        let currentMacroData = null;
+        let editingMacroNode = null;
+        
+        let customDragGhost = null; 
+
+        // --- Утилиты для работы с курсором (Caret) ---
+        function setCaretPosition(node, offset) {
+            const range = document.createRange();
+            const selection = window.getSelection();
+            
+            if (node && node.nodeType === Node.ELEMENT_NODE && node.classList.contains('macro')) {
+                // Try to place caret next to the macro, prioritizing text nodes
+                const textNode = node.nextSibling || node.previousSibling;
+                if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                    offset = node.nextSibling ? 0 : textNode.length;
+                    node = textNode;
+                } else {
+                    // If no text node, create one to place caret
+                    const emptyTextNode = document.createTextNode('');
+                    node.parentNode.insertBefore(emptyTextNode, node.nextSibling);
+                    node = emptyTextNode;
+                    offset = 0;
+                }
+            } else if (!node || !editableDiv.contains(node)) { // Fallback to end of editableDiv if node is invalid or outside
+                node = editableDiv;
+                offset = editableDiv.childNodes.length;
+            }
+
+            if (node.nodeType === Node.TEXT_NODE) {
+                range.setStart(node, Math.min(offset, node.length));
+            } else {
+                range.setStart(node, Math.min(offset, node.childNodes.length));
+            }
+            range.collapse(true);
+
+            selection.removeAllRanges();
+            selection.addRange(range);
+            editableDiv.focus();
+        }
+
+        function insertNodeAtCaret(newNode, range = null) {
+            const selection = window.getSelection();
+            
+            // If no range is provided or selection is outside editableDiv, append to end
+            if (!range || !editableDiv.contains(range.startContainer)) {
+                editableDiv.appendChild(newNode);
+                setCaretPosition(newNode.nextSibling || editableDiv, newNode.nextSibling ? 0 : editableDiv.childNodes.length);
+                return newNode;
+            }
+            
+            // If range is provided, use it
+            if (range.startContainer.nodeType === Node.ELEMENT_NODE && range.startContainer.classList.contains('macro')) {
+                // Prevent inserting inside a macro
+                return null;
+            }
+
+            range.deleteContents();
+
+            if (range.startContainer.nodeType === Node.TEXT_NODE) {
+                const textNode = range.startContainer;
+                const textBefore = textNode.textContent.substring(0, range.startOffset);
+                const textAfter = textNode.textContent.substring(range.startOffset);
+
+                const newTextNodeBefore = document.createTextNode(textBefore);
+                const newTextNodeAfter = document.createTextNode(textAfter);
+
+                const parent = textNode.parentNode;
+                parent.replaceChild(newTextNodeAfter, textNode);
+                parent.insertBefore(newNode, newTextNodeAfter);
+                parent.insertBefore(newTextNodeBefore, newNode);
+
+                setCaretPosition(newTextNodeAfter, 0);
+
+            } else {
+                const targetNode = range.startContainer.childNodes[range.startOffset];
+                if (targetNode) {
+                    range.startContainer.insertBefore(newNode, targetNode);
+                } else {
+                    range.startContainer.appendChild(newNode);
+                }
+                setCaretPosition(newNode.nextSibling || range.startContainer, newNode.nextSibling ? 0 : range.startContainer.childNodes.length);
+            }
+            return newNode;
+        }
+        
+        function debounce(func, delay) {
+            let timeoutId;
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // --- Функции для макросов ---
+        function createMacroSpan(macroTypeData, params) {
+            const macroSpan = document.createElement('span');
+            macroSpan.classList.add('macro');
+            macroSpan.setAttribute('contenteditable', 'false');
+            macroSpan.setAttribute('draggable', 'true');
+
+            macroSpan.dataset.type = macroTypeData.type;
+            macroSpan.dataset.params = JSON.stringify(params || {});
+            
+            if (macroTypeData.styles) {
+                Object.assign(macroSpan.style, macroTypeData.styles);
+            }
+
+            let displayText = macroTypeData.display;
+            if (macroTypeData.parameterized && params) {
+                const paramStrings = macroTypeData.params.map(paramDef => {
+                    let value = params[paramDef.name] !== undefined ? params[paramDef.name] : paramDef.default;
+                    if (paramDef.type === 'list') {
+                        // For list, 'items' is the parameter name, and its value is an array
+                        value = (params.items || []).join(',');
+                    } else if (paramDef.type === 'select') {
+                        // For select, just use the value
+                    } else if (paramDef.type === 'checkbox') {
+                        value = value ? 'true' : 'false'; // Store as 'true'/'false' string
+                    }
+                    if (value !== undefined && value !== null && value !== '') {
+                         return `${paramDef.name}:${value}`;
+                    }
+                    return '';
+                }).filter(s => s).join(',');
+                if (paramStrings) {
+                    displayText = `${macroTypeData.display} (${paramStrings})`; /* Изменен формат отображения */
+                }
+            }
+            macroSpan.textContent = displayText;
+            return macroSpan;
+        }
+
+        function loadTextWithMacros(targetDiv, initialText, macrosData) {
+            targetDiv.innerHTML = '';
+            
+            const regex = /\[\[([a-zA-Z0-9_]+)(?::([^\]]+))?\]\]/g;
+            let match;
+            let lastIndex = 0;
+
+            while ((match = regex.exec(initialText)) !== null) {
+                const fullPlaceholder = match[0];
+                const macroType = match[1];
+                const rawParams = match[2]; // Parameters from the string, e.g., "min:1,max:10"
+
+                const textBeforePlaceholder = initialText.substring(lastIndex, match.index);
+                if (textBeforePlaceholder) {
+                    targetDiv.appendChild(document.createTextNode(textBeforePlaceholder));
+                }
+
+                const macroDefinition = availableMacros.find(m => m.type === macroType);
+                let actualParams = {};
+
+                if (macroDefinition) {
+                    // Prioritize parameters from the string
+                    if (rawParams) {
+                        try {
+                            actualParams = rawParams.split(',').reduce((acc, part) => {
+                                const [key, ...values] = part.split(':');
+                                const value = values.join(':');
+                                if (key && value) {
+                                     const paramDef = macroDefinition.params?.find(p => p.name === key.trim()); // Added optional chaining
+                                     if (paramDef && paramDef.type === 'list') {
+                                        acc[key.trim()] = value.split(',').map(item => item.trim());
+                                     } else if (paramDef && paramDef.type === 'number') {
+                                        acc[key.trim()] = Number(value.trim());
+                                     } else if (paramDef && paramDef.type === 'checkbox') {
+                                        acc[key.trim()] = value.trim().toLowerCase() === 'true';
+                                     } else {
+                                        acc[key.trim()] = value.trim();
+                                     }
+                                }
+                                return acc;
+                            }, {});
+                        } catch (e) {
+                            console.warn("Could not parse macro parameters from string:", rawParams, e);
+                            actualParams = {};
+                        }
+                    } else {
+                        // Fallback to initialMacrosData if no params in string
+                        const foundInitialMacro = macrosData.find(m => m.type === macroType);
+                        if (foundInitialMacro) {
+                            actualParams = foundInitialMacro.params || {};
+                        }
+                    }
+                    // Ensure all default parameters are present if not explicitly set
+                    if (macroDefinition.params) { // Added check for macroDefinition.params
+                        macroDefinition.params.forEach(paramDef => {
+                            if (actualParams[paramDef.name] === undefined) {
+                                actualParams[paramDef.name] = paramDef.default;
+                            }
+                        });
+                    }
+
+                    const macroSpan = createMacroSpan(macroDefinition, actualParams);
+                    targetDiv.appendChild(macroSpan);
+                } else {
+                    // If macro definition not found, insert as plain text
+                    targetDiv.appendChild(document.createTextNode(fullPlaceholder));
+                }
+                
+                lastIndex = regex.lastIndex;
+            }
+
+            const remainingText = initialText.substring(lastIndex);
+            if (remainingText) {
+                targetDiv.appendChild(document.createTextNode(remainingText));
+            }
+        }
+
+        function generateMacroButtons(macrosToDisplay = availableMacros) {
+            macroButtonsContainer.innerHTML = '';
+            macrosToDisplay.forEach(macro => {
+                const button = document.createElement('button');
+                button.classList.add('macro-button');
+                button.textContent = macro.display;
+                button.dataset.type = macro.type;
+                button.addEventListener('click', () => {
+                    handleMacroButtonClick(macro);
+                });
+                button.setAttribute('draggable', 'true');
+                button.addEventListener('dragstart', (e) => {
+                    e.stopPropagation();
+                    const tempMacroData = JSON.stringify({ type: macro.type, params: {} });
+                    e.dataTransfer.setData('text/plain', tempMacroData);
+                    e.dataTransfer.effectAllowed = 'copy';
+                    
+                    const clonedElement = e.target.cloneNode(true);
+                    clonedElement.style.position = 'absolute';
+                    clonedElement.style.top = '-1000px';
+                    clonedElement.style.opacity = '0.5';
+                    document.body.appendChild(clonedElement);
+                    e.dataTransfer.setDragImage(clonedElement, 0, 0);
+                    customDragGhost = clonedElement;
+                    dragInProgress = true;
+                });
+                
+                button.addEventListener('dragend', () => {
+                    if (customDragGhost) {
+                        customDragGhost.remove();
+                        customDragGhost = null;
+                    }
+                    dragInProgress = false;
+                });
+                
+                macroButtonsContainer.appendChild(button);
+            });
+        }
+        
+        macroSearchInput.addEventListener('input', debounce(() => {
+            const query = macroSearchInput.value.toLowerCase().trim();
+            if (query.length > 0) {
+                clearSearchButton.style.display = 'block';
+            } else {
+                clearSearchButton.style.display = 'none';
+            }
+            const filteredMacros = availableMacros.filter(macro => 
+                macro.display.toLowerCase().includes(query) || macro.type.toLowerCase().includes(query)
+            );
+            generateMacroButtons(filteredMacros);
+        }, 100)); // Debounce reduced to 100ms
+
+        clearSearchButton.addEventListener('click', () => {
+            macroSearchInput.value = '';
+            clearSearchButton.style.display = 'none';
+            generateMacroButtons();
+        });
+
+        function handleMacroButtonClick(macroData) {
+            hideMacroParametersPanel();
+            clearActiveMacro();
+
+            // Get current selection range
+            let currentRange = null;
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                currentRange = selection.getRangeAt(0);
+            }
+
+            // If no valid range inside editableDiv, set it to the end
+            if (!currentRange || !editableDiv.contains(currentRange.startContainer)) {
+                currentRange = document.createRange();
+                currentRange.selectNodeContents(editableDiv);
+                currentRange.collapse(false); // Collapse to the end
+                selection.removeAllRanges();
+                selection.addRange(currentRange);
+            }
+            editableDiv.focus(); // Ensure editor has focus
+
+            if (macroData.isUnique) {
+                editableDiv.querySelectorAll(`.macro[data-type="${macroData.type}"]`).forEach(node => {
+                    node.remove();
+                });
+            }
+            
+            let defaultParams = {};
+            if (macroData.parameterized) {
+                if (macroData.params) { // Added check for macroData.params
+                    macroData.params.forEach(param => {
+                        if (param.type === 'list') {
+                            defaultParams[param.name] = param.default || []; // Ensure default is an array
+                        } else if (param.type === 'select') {
+                            defaultParams[param.name] = param.default;
+                        } else if (param.type === 'checkbox') {
+                            defaultParams[param.name] = param.default;
+                        }
+                        else {
+                            defaultParams[param.name] = param.default;
+                        }
+                    });
+                }
+            }
+
+            const newMacroSpan = createMacroSpan(macroData, defaultParams);
+            const insertedNode = insertNodeAtCaret(newMacroSpan, currentRange); // Pass the determined range
+            if (insertedNode) {
+                insertedNode.classList.add('active'); 
+                addDeleteIcon(insertedNode); 
+                
+                if (macroData.parameterized) {
+                    showMacroParametersPanel(macroData, insertedNode);
+                } else {
+                    showMacroInfoPanel(macroData, insertedNode);
+                }
+            }
+            
+            updateOutput();
+            saveHistory();
+        }
+
+        function updateMacro(macroTypeData, params, existingNode) {
+            const newMacroSpan = createMacroSpan(macroTypeData, params);
+            
+            if (existingNode.isConnected) {
+                existingNode.parentNode.replaceChild(newMacroSpan, existingNode);
+            }
+            
+            editingMacroNode = newMacroSpan;
+            newMacroSpan.classList.add('active');
+            addDeleteIcon(newMacroSpan);
+            updateOutput();
+            saveHistory();
+        }
+        
+        function removeMacro(nodeToRemove) {
+            const parent = nodeToRemove.parentNode;
+            const prevNode = nodeToRemove.previousSibling;
+            
+            parent.removeChild(nodeToRemove);
+
+            if (prevNode) {
+                setCaretPosition(prevNode, prevNode.nodeType === Node.TEXT_NODE ? prevNode.length : prevNode.childNodes.length);
+            } else if (parent.firstChild) {
+                setCaretPosition(parent.firstChild, 0);
+            } else {
+                parent.appendChild(document.createTextNode(''));
+                setCaretPosition(parent.firstChild, 0);
+            }
+            hideMacroParametersPanel();
+            updateOutput();
+            saveHistory();
+        }
+        
+        const updateMacroFromPanel = debounce(() => {
+            if (!editingMacroNode || !currentMacroData) return;
+
+            const params = {};
+            let isValid = true;
+            
+            if (currentMacroData.parameterized) {
+                currentMacroData.params.forEach(paramDef => {
+                    if (paramDef.type === 'list') {
+                        const listContainer = panelInputContainer.querySelector('.dynamic-input-container');
+                        if (listContainer) { // Ensure container exists
+                            const inputs = listContainer.querySelectorAll('input[type="text"]');
+                            const items = Array.from(inputs).map(input => input.value).filter(val => val.trim() !== '');
+                            params[paramDef.name] = items; // Use paramDef.name, which is 'items' for list types
+                        }
+                    } else if (paramDef.type === 'number') {
+                        const input = panelInputContainer.querySelector(`input[name="${paramDef.name}"]`);
+                        const value = Number(input.value);
+                        params[paramDef.name] = value;
+
+                        // Validation for random macro
+                        if (currentMacroData.type === 'random') {
+                            const minInput = panelInputContainer.querySelector('input[name="min"]');
+                            const maxInput = panelInputContainer.querySelector('input[name="max"]');
+                            const minVal = Number(minInput.value);
+                            const maxVal = Number(maxInput.value);
+                            const errorDiv = input.nextElementSibling; // Assuming error div is right after input
+
+                            if (paramDef.name === 'min' && minVal > maxVal) {
+                                if (!errorDiv || !errorDiv.classList.contains('error-message')) {
+                                    const newErrorDiv = document.createElement('div');
+                                    newErrorDiv.classList.add('error-message');
+                                    input.parentNode.insertBefore(newErrorDiv, input.nextSibling);
+                                }
+                                input.nextElementSibling.textContent = 'Минимум не может быть больше максимума.';
+                                input.classList.add('border-red-500');
+                                isValid = false;
+                            } else if (paramDef.name === 'max' && maxVal < minVal) {
+                                if (!errorDiv || !errorDiv.classList.contains('error-message')) {
+                                    const newErrorDiv = document.createElement('div');
+                                    newErrorDiv.classList.add('error-message');
+                                    input.parentNode.insertBefore(newErrorDiv, input.nextSibling);
+                                }
+                                input.nextElementSibling.textContent = 'Максимум не может быть меньше минимума.';
+                                input.classList.add('border-red-500');
+                                isValid = false;
+                            } else {
+                                if (errorDiv && errorDiv.classList.contains('error-message')) {
+                                    errorDiv.remove();
+                                }
+                                input.classList.remove('border-red-500');
+                            }
+                        }
+                    } else if (paramDef.type === 'checkbox') {
+                        const input = panelInputContainer.querySelector(`input[name="${paramDef.name}"]`);
+                        params[paramDef.name] = input.checked;
+                    } else if (paramDef.type === 'date') {
+                        const input = panelInputContainer.querySelector(`input[name="${paramDef.name}"]`);
+                        params[paramDef.name] = input.value;
+
+                        // Validation for date_picker macro
+                        if (currentMacroData.type === 'date_picker') {
+                            const startDateInput = panelInputContainer.querySelector('input[name="start_date"]');
+                            const endDateInput = panelInputContainer.querySelector('input[name="end_date"]');
+                            const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+                            const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+
+                            let errorDiv = input.nextElementSibling;
+                            if (errorDiv && errorDiv.classList.contains('error-message')) {
+                                errorDiv.remove();
+                            }
+                            input.classList.remove('border-red-500');
+
+                            if (startDate && endDate && startDate > endDate) {
+                                if (paramDef.name === 'start_date') {
+                                    if (!startDateInput.nextElementSibling || !startDateInput.nextElementSibling.classList.contains('error-message')) {
+                                        const newErrorDiv = document.createElement('div');
+                                        newErrorDiv.classList.add('error-message');
+                                        startDateInput.parentNode.insertBefore(newErrorDiv, startDateInput.nextSibling);
+                                    }
+                                    startDateInput.nextElementSibling.textContent = 'Начальная дата не может быть позже конечной.';
+                                    startDateInput.classList.add('border-red-500');
+                                } else if (paramDef.name === 'end_date') {
+                                    if (!endDateInput.nextElementSibling || !endDateInput.nextElementSibling.classList.contains('error-message')) {
+                                        const newErrorDiv = document.createElement('div');
+                                        newErrorDiv.classList.add('error-message');
+                                        endDateInput.parentNode.insertBefore(newErrorDiv, endDateInput.nextSibling);
+                                    }
+                                    endDateInput.nextElementSibling.textContent = 'Конечная дата не может быть раньше начальной.';
+                                    endDateInput.classList.add('border-red-500');
+                                }
+                                isValid = false;
+                            }
+                        }
+                    } else if (paramDef.type === 'select') {
+                        const select = panelInputContainer.querySelector(`select[name="${paramDef.name}"]`);
+                        params[paramDef.name] = select.value;
+                    }
+                    else {
+                        const input = panelInputContainer.querySelector(`input[name="${paramDef.name}"]`);
+                        if (input) {
+                            params[paramDef.name] = input.value;
+                        }
+                    }
+                });
+            }
+            
+            if (isValid) {
+                updateMacro(currentMacroData, params, editingMacroNode);
+            }
+        }, 150); // Debounce reduced to 150ms
+
+        function showMacroParametersPanel(macroData, nodeToEdit) {
+            window.getSelection().removeAllRanges();
+            
+            panelTitle.textContent = `Редактировать: ${macroData.display}`;
+            panelDescription.textContent = macroData.description;
+            panelInputContainer.innerHTML = '';
+            panelButtonGroup.innerHTML = '';
+
+            currentMacroData = macroData;
+            editingMacroNode = nodeToEdit;
+
+            let currentParams = {};
+            try {
+                currentParams = JSON.parse(nodeToEdit.dataset.params || '{}');
+            } catch (e) {
+                console.error("Ошибка парсинга параметров макроса из data-params:", e);
+            }
+            
+            macroData.params.forEach(param => {
+                const inputGroup = document.createElement('div');
+                inputGroup.classList.add('input-group');
+                
+                if (macroData.type === 'datetime' && (param.name === 'offset' || param.name === 'unit')) {
+                    // Handle offset and unit together
+                    if (param.name === 'offset') {
+                        const label = document.createElement('label');
+                        label.textContent = 'Смещение:';
+                        inputGroup.appendChild(label);
+
+                        const offsetUnitFields = document.createElement('div');
+                        offsetUnitFields.classList.add('date-offset-fields'); // Use new class for flex container
+                        
+                        const offsetInput = document.createElement('input');
+                        offsetInput.type = 'number';
+                        offsetInput.name = 'offset';
+                        offsetInput.value = currentParams.offset !== undefined ? currentParams.offset : 0;
+                        offsetInput.addEventListener('input', updateMacroFromPanel);
+                        offsetUnitFields.appendChild(offsetInput);
+
+                        const unitParam = macroData.params.find(p => p.name === 'unit');
+                        if (unitParam) {
+                            const unitSelect = document.createElement('select');
+                            unitSelect.name = 'unit';
+                            unitParam.options.forEach(optionText => {
+                                const option = document.createElement('option');
+                                option.value = optionText;
+                                option.textContent = optionText;
+                                unitSelect.appendChild(option);
+                            });
+                            unitSelect.value = currentParams.unit !== undefined ? currentParams.unit : unitParam.default;
+                            unitSelect.addEventListener('change', updateMacroFromPanel);
+                            offsetUnitFields.appendChild(unitSelect);
+                        }
+                        inputGroup.appendChild(offsetUnitFields);
+                        panelInputContainer.appendChild(inputGroup);
+                    }
+                    return; // Skip individual rendering for offset/unit
+                } else if (param.type === 'list') {
+                    const label = document.createElement('label');
+                    label.textContent = param.label + ':';
+                    inputGroup.appendChild(label);
+
+                    const listContainer = document.createElement('div');
+                    listContainer.classList.add('dynamic-input-container');
+                    inputGroup.appendChild(listContainer);
+
+                    const addButton = document.createElement('button');
+                    addButton.textContent = 'Добавить элемент';
+                    addButton.classList.add('add-item-button');
+                    addButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        addDynamicInputField(listContainer, addButton);
+                        updateMacroFromPanel(); // Update macro immediately after adding a new field
+                    });
+                    inputGroup.appendChild(addButton);
+
+                    const items = currentParams[param.name] || [];
+                    if (items.length === 0) {
+                        addDynamicInputField(listContainer, addButton, ''); // Add at least one empty field if list is empty
+                    } else {
+                        items.forEach(item => {
+                            addDynamicInputField(listContainer, addButton, item);
+                        });
+                    }
+                    
+                    // Add input event listener to the listContainer for changes in any input field
+                    listContainer.addEventListener('input', updateMacroFromPanel);
+                    listContainer.addEventListener('click', (e) => {
+                        // Re-check button state after any removal
+                        if (e.target.classList.contains('remove-button')) {
+                            if (listContainer.querySelectorAll('.dynamic-input-item').length < 10) {
+                                addButton.disabled = false;
+                            }
+                        }
+                    });
+
+                    panelInputContainer.appendChild(inputGroup);
+
+                } else { // Handle other parameter types (text, number, date, checkbox, select)
+                    if (param.type !== 'checkbox') { // Don't add a general label for checkboxes, they have their own
+                        const label = document.createElement('label');
+                        label.textContent = param.label + ':';
+                        // Assign unique ID to input and link label to it
+                        const inputId = `input-${param.name}-${Math.random().toString(36).substr(2, 9)}`;
+                        label.htmlFor = inputId;
+                        inputGroup.appendChild(label);
+
+                        if (param.type === 'select') {
+                            const selectElement = document.createElement('select');
+                            selectElement.name = param.name;
+                            selectElement.id = inputId;
+                            param.options.forEach(optionText => {
+                                const option = document.createElement('option');
+                                option.value = optionText;
+                                option.textContent = optionText;
+                                selectElement.appendChild(option);
+                            });
+                            selectElement.value = currentParams[param.name] !== undefined ? currentParams[param.name] : param.default;
+                            selectElement.addEventListener('change', updateMacroFromPanel);
+                            inputGroup.appendChild(selectElement);
+                        } else {
+                            const inputElement = document.createElement('input');
+                            inputElement.type = param.type;
+                            inputElement.name = param.name;
+                            inputElement.id = inputId; // Set ID here
+                            inputElement.value = currentParams[param.name] !== undefined ? currentParams[param.name] : param.default;
+                            inputElement.placeholder = `Введите ${param.label.toLowerCase()}`;
+                            inputElement.addEventListener('input', updateMacroFromPanel);
+                            inputGroup.appendChild(inputElement);
+                        }
+                        
+                    } else { // Checkbox type
+                        const checkboxWrapper = document.createElement('div');
+                        checkboxWrapper.classList.add('checkbox-group');
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.name = param.name;
+                        input.id = `checkbox-${param.name}-${Math.random().toString(36).substr(2, 9)}`; // Unique ID
+                        input.checked = currentParams[param.name] !== undefined ? currentParams[param.name] : param.default;
+                        input.addEventListener('change', updateMacroFromPanel);
+                        checkboxWrapper.appendChild(input);
+                        const checkboxLabel = document.createElement('label');
+                        checkboxLabel.textContent = param.label;
+                        checkboxLabel.htmlFor = input.id; // Link label to checkbox
+                        checkboxWrapper.appendChild(checkboxLabel);
+                        inputGroup.appendChild(checkboxWrapper);
+                    }
+                    panelInputContainer.appendChild(inputGroup);
+                }
+            });
+            
+            // Re-order elements for date_picker preview
+            if (macroData.type === 'date_picker') {
+                // Find the input group for 'display_format' to insert after it
+                const formatInput = panelInputContainer.querySelector('input[name="display_format"]');
+                if (formatInput) {
+                    const formatInputGroup = formatInput.closest('.input-group');
+                    if (formatInputGroup) {
+                        createDatePickerPreview(currentParams, formatInputGroup);
+                    }
+                }
+            } else if (macroData.type === 'datetime') {
+                createDateTimePreview(currentParams);
+            }
+
+
+            // Initial validation for random and date_picker macros when panel opens
+            if (macroData.type === 'random') {
+                const minInput = panelInputContainer.querySelector('input[name="min"]');
+                const maxInput = panelInputContainer.querySelector('input[name="max"]');
+                // Trigger validation on load
+                if (minInput) minInput.dispatchEvent(new Event('input'));
+                if (maxInput) maxInput.dispatchEvent(new Event('input'));
+            } else if (macroData.type === 'date_picker') {
+                const startDateInput = panelInputContainer.querySelector('input[name="start_date"]');
+                const endDateInput = panelInputContainer.querySelector('input[name="end_date"]');
+                if (startDateInput) startDateInput.dispatchEvent(new Event('input'));
+                if (endDateInput) endDateInput.dispatchEvent(new Event('input'));
+            }
+            
+            macroParamsPanel.classList.add('active');
+            const firstInput = panelInputContainer.querySelector('input, select');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        }
+        
+        function showMacroInfoPanel(macroData, nodeToEdit) {
+            window.getSelection().removeAllRanges();
+            
+            panelTitle.textContent = `Информация: ${macroData.display}`;
+            panelDescription.textContent = macroData.description;
+            panelInputContainer.innerHTML = '';
+            panelButtonGroup.innerHTML = '';
+            currentMacroData = macroData;
+            editingMacroNode = nodeToEdit;
+
+            macroParamsPanel.classList.add('active');
+        }
+        
+        function hideMacroParametersPanel() {
+            macroParamsPanel.classList.remove('active');
+            editingMacroNode = null;
+            currentMacroData = null;
+        }
+
+        function addDynamicInputField(container, addButton, value = '') {
+            const currentItemsCount = container.querySelectorAll('.dynamic-input-item').length;
+            if (currentItemsCount >= 10) {
+                addButton.disabled = true;
+                return;
+            }
+            const itemWrapper = document.createElement('div');
+            itemWrapper.classList.add('dynamic-input-item');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Значение';
+            input.value = value;
+            // Add input event listener directly to the input field
+            input.addEventListener('input', updateMacroFromPanel);
+
+            const removeButton = document.createElement('button');
+            removeButton.textContent = '-';
+            removeButton.classList.add('remove-button');
+            removeButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const currentItems = container.querySelectorAll('.dynamic-input-item');
+                if (currentItems.length > 1) {
+                    itemWrapper.remove();
+                } else {
+                    input.value = ''; // Clear if only one item left
+                }
+                if (container.querySelectorAll('.dynamic-input-item').length < 10) {
+                    addButton.disabled = false;
+                }
+                updateMacroFromPanel();
+                input.focus();
+            });
+            itemWrapper.appendChild(input);
+            itemWrapper.appendChild(removeButton);
+            container.appendChild(itemWrapper);
+            input.focus();
+            if (container.querySelectorAll('.dynamic-input-item').length >= 10) {
+                 addButton.disabled = true;
+            }
+        }
+        
+        function displayDateTimePreview(formatStr, offsetVal, unit) {
+            const now = new Date();
+            const offset = parseInt(offsetVal, 10);
+            
+            if (!isNaN(offset) && offset !== 0) {
+                switch(unit) {
+                    case 'секунды':
+                        now.setSeconds(now.getSeconds() + offset);
+                        break;
+                    case 'минуты':
+                        now.setMinutes(now.getMinutes() + offset);
+                        break;
+                    case 'часы':
+                        now.setHours(now.getHours() + offset);
+                        break;
+                    case 'дни':
+                    default:
+                        now.setDate(now.getDate() + offset);
+                        break;
+                }
+            }
+
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            const daysOfWeek = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+            const dayOfWeek = daysOfWeek[now.getDay()];
+            
+            const months = ['Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня', 'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
+            const monthText = months[now.getMonth()];
+            
+            let formattedTime = formatStr
+                .replace(/YYYY/g, year)
+                .replace(/MM/g, month)
+                .replace(/DD/g, day)
+                .replace(/dddd/g, dayOfWeek)
+                .replace(/MMMM/g, monthText)
+                .replace(/HH/g, hours)
+                .replace(/mm/g, minutes)
+                .replace(/ss/g, seconds);
+
+            const previewOutput = document.getElementById('previewOutput');
+            if (previewOutput) {
+                previewOutput.textContent = formattedTime;
+            }
+        }
+
+        function createDateTimePreview(currentParams) {
+            const formatInput = panelInputContainer.querySelector('input[name="format"]');
+            const offsetValueInput = panelInputContainer.querySelector('input[name="offset"]');
+            const unitSelect = panelInputContainer.querySelector('select[name="unit"]');
+
+            const previewGroup = document.createElement('div');
+            previewGroup.classList.add('input-group');
+            previewGroup.innerHTML = `<label>Предварительный просмотр:</label><div id="previewOutput" class="preview-box"></div>`;
+            panelInputContainer.appendChild(previewGroup);
+
+            const commonFormatsContainer = document.createElement('div');
+            commonFormatsContainer.classList.add('common-formats-container');
+            commonFormatsContainer.innerHTML = `
+                <label>Популярные форматы:</label>
+                <div class="format-buttons-wrapper">
+                    <button class="format-button" data-format="DD.MM.YYYY">DD.MM.YYYY</button>
+                    <button class="format-button" data-format="HH:mm:ss">HH:mm:ss</button>
+                    <button class="format-button" data-format="DD MMMM YYYY">DD MMMM YYYY</button>
+                    <button class="format-button" data-format="dddd, HH:mm">День недели, HH:mm</button>
+                </div>
+            `;
+            panelInputContainer.appendChild(commonFormatsContainer);
+
+            function updatePreview() {
+                displayDateTimePreview(formatInput.value, offsetValueInput.value, unitSelect.value);
+            }
+
+            formatInput.addEventListener('input', updatePreview);
+            offsetValueInput.addEventListener('input', updatePreview);
+            unitSelect.addEventListener('change', updatePreview);
+
+            commonFormatsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('format-button')) {
+                    formatInput.value = e.target.dataset.format;
+                    updatePreview();
+                    updateMacroFromPanel();
+                }
+            });
+
+            updatePreview();
+        }
+
+        function displayDatePickerPreview(formatStr, dateVal) {
+            let dateToFormat = dateVal ? new Date(dateVal) : new Date(); // Use provided date or current date
+            if (isNaN(dateToFormat.getTime())) { // Check for invalid date
+                dateToFormat = new Date(); // Fallback to current date
+            }
+
+            const year = dateToFormat.getFullYear();
+            const month = (dateToFormat.getMonth() + 1).toString().padStart(2, '0');
+            const day = dateToFormat.getDate().toString().padStart(2, '0');
+            
+            const daysOfWeek = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+            const dayOfWeek = daysOfWeek[dateToFormat.getDay()];
+            
+            const months = ['Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня', 'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
+            const monthText = months[dateToFormat.getMonth()];
+            
+            let formattedDate = formatStr
+                .replace(/YYYY/g, year)
+                .replace(/MM/g, month)
+                .replace(/DD/g, day)
+                .replace(/dddd/g, dayOfWeek)
+                .replace(/MMMM/g, monthText);
+
+            const previewOutput = document.getElementById('datePickerPreviewOutput');
+            if (previewOutput) {
+                previewOutput.textContent = formattedDate;
+            }
+        }
+
+        function createDatePickerPreview(currentParams, insertAfterElement) {
+            const formatInput = panelInputContainer.querySelector('input[name="display_format"]');
+            const startDateInput = panelInputContainer.querySelector('input[name="start_date"]');
+            const endDateInput = panelInputContainer.querySelector('input[name="end_date"]');
+
+            const previewGroup = document.createElement('div');
+            previewGroup.classList.add('input-group');
+            previewGroup.innerHTML = `<label>Предварительный просмотр:</label><div id="datePickerPreviewOutput" class="preview-box"></div>`;
+            
+            const commonFormatsContainer = document.createElement('div');
+            commonFormatsContainer.classList.add('common-formats-container');
+            commonFormatsContainer.innerHTML = `
+                <label>Популярные форматы:</label>
+                <div class="format-buttons-wrapper">
+                    <button class="format-button" data-format="DD.MM.YYYY">DD.MM.YYYY</button>
+                    <button class="format-button" data-format="YYYY-MM-DD">YYYY-MM-DD</button>
+                    <button class="format-button" data-format="MM/DD/YYYY">MM/DD/YYYY</button>
+                    <button class="format-button" data-format="DD MMMM YYYY">DD MMMM YYYY</button>
+                </div>
+            `;
+            
+            // Insert preview and formats directly after the format input group
+            if (insertAfterElement && insertAfterElement.parentNode) {
+                insertAfterElement.parentNode.insertBefore(previewGroup, insertAfterElement.nextSibling);
+                insertAfterElement.parentNode.insertBefore(commonFormatsContainer, previewGroup.nextSibling);
+            } else {
+                // Fallback if insertAfterElement is not found, append to panelInputContainer
+                panelInputContainer.appendChild(previewGroup);
+                panelInputContainer.appendChild(commonFormatsContainer);
+            }
+
+            function updatePreview() {
+                // Use start_date for preview if available, otherwise current date
+                const dateToPreview = startDateInput.value || new Date().toISOString().split('T')[0];
+                displayDatePickerPreview(formatInput.value, dateToPreview);
+            }
+
+            formatInput.addEventListener('input', updatePreview);
+            startDateInput.addEventListener('input', updatePreview);
+            endDateInput.addEventListener('input', updatePreview); // Also update on end date change for consistency
+
+            commonFormatsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('format-button')) {
+                    formatInput.value = e.target.dataset.format;
+                    updatePreview();
+                    updateMacroFromPanel();
+                }
+            });
+
+            updatePreview();
+        }
+
+        // --- Логика для управления курсором, удалением и перетаскиванием макросов ---
+        function clearActiveMacro() {
+            const activeMacro = editableDiv.querySelector('.macro.active');
+            if (activeMacro) {
+                activeMacro.classList.remove('active');
+                const deleteIcon = activeMacro.querySelector('.delete-macro-icon');
+                if (deleteIcon) {
+                    deleteIcon.remove();
+                }
+            }
+        }
+        
+        function addDeleteIcon(macroNode) {
+            if (macroNode.querySelector('.delete-macro-icon')) {
+                return;
+            }
+            const deleteIcon = document.createElement('span');
+            deleteIcon.classList.add('delete-macro-icon');
+            deleteIcon.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M16 9v10H8V9h8m-1.5-6h-5L9 5H5v2h14V5h-4l-1.5-2zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
+                </svg>
+            `;
+            deleteIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeMacro(macroNode);
+            });
+            macroNode.appendChild(deleteIcon);
+        }
+
+        // Обработчики событий для перетаскивания
+        editableDiv.addEventListener('dragstart', (event) => {
+            if (event.target.classList.contains('macro')) {
+                event.stopPropagation();
+                draggedMacro = event.target;
+                const macroData = {
+                    type: draggedMacro.dataset.type,
+                    params: draggedMacro.dataset.params
+                };
+                event.dataTransfer.setData('text/plain', JSON.stringify(macroData));
+                event.dataTransfer.effectAllowed = 'move';
+                
+                const clonedElement = event.target.cloneNode(true);
+                clonedElement.style.position = 'absolute';
+                clonedElement.style.top = '-1000px';
+                clonedElement.style.opacity = '0.5';
+                document.body.appendChild(clonedElement);
+                event.dataTransfer.setDragImage(clonedElement, 0, 0);
+                customDragGhost = clonedElement;
+
+                setTimeout(() => draggedMacro.classList.add('dragging'), 0);
+                dragInProgress = true;
+            }
+        });
+
+        editableDiv.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+            
+            if (range && editableDiv.contains(range.startContainer)) {
+                let targetNode = range.startContainer;
+                let rect;
+
+                if (targetNode.nodeType === Node.TEXT_NODE) {
+                    targetNode = targetNode.parentNode;
+                }
+
+                if (targetNode && targetNode.classList.contains('macro')) {
+                    rect = targetNode.getBoundingClientRect();
+                    const halfWidth = rect.left + rect.width / 2;
+                    if (event.clientX < halfWidth) {
+                        dropTarget.style.left = `${rect.left}px`;
+                    } else {
+                        dropTarget.style.left = `${rect.right}px`;
+                    }
+                    dropTarget.style.top = `${rect.top}px`;
+                    dropTarget.style.height = `${rect.height}px`;
+                } else {
+                    rect = range.getBoundingClientRect();
+                    dropTarget.style.left = `${rect.left}px`;
+                    dropTarget.style.top = `${rect.top}px`;
+                    dropTarget.style.height = `${rect.height}px`;
+                }
+                
+                dropTarget.style.display = 'block';
+            } else {
+                 dropTarget.style.display = 'none';
+            }
+        });
+        
+
+        editableDiv.addEventListener('dragleave', (event) => {
+            if (!editableDiv.contains(event.relatedTarget)) {
+                 dropTarget.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('dragend', (event) => {
+            // Исправление: удаляем класс 'dragging' в конце перетаскивания
+            if (draggedMacro) {
+                draggedMacro.classList.remove('dragging');
+                draggedMacro = null;
+            }
+            dropTarget.style.display = 'none';
+            if (customDragGhost) {
+                customDragGhost.remove();
+                customDragGhost = null;
+            }
+            dragInProgress = false;
+        });
+
+        editableDiv.addEventListener('drop', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            dropTarget.style.display = 'none';
+            if (customDragGhost) {
+                customDragGhost.remove();
+                customDragGhost = null;
+            }
+
+            const data = event.dataTransfer.getData('text/plain');
+            let macroData = {};
+            try {
+                macroData = JSON.parse(data);
+            } catch (e) {
+                console.error("Failed to parse macro data from drop event", e);
+                return;
+            }
+            
+            const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+            if (!range || !editableDiv.contains(range.startContainer)) {
+                return;
+            }
+            
+            let nodeToInsert = null;
+            let isMove = false;
+            
+            if (draggedMacro && draggedMacro.dataset.type === macroData.type) {
+                nodeToInsert = draggedMacro;
+                isMove = true;
+                // Удаляем класс 'dragging' сразу после drop, чтобы макрос не выглядел тусклым
+                nodeToInsert.classList.remove('dragging');
+                draggedMacro.remove();
+            } else {
+                const macroDefinition = availableMacros.find(m => m.type === macroData.type);
+                if (!macroDefinition) return;
+                const existingParams = macroData.params ? JSON.parse(macroData.params) : {};
+                nodeToInsert = createMacroSpan(macroDefinition, existingParams);
+            }
+            if (!nodeToInsert) return;
+
+            let targetNode = range.startContainer;
+            if (targetNode.nodeType === Node.TEXT_NODE) {
+                targetNode = targetNode.parentNode;
+            }
+            
+            if (targetNode && targetNode.classList.contains('macro')) {
+                const rect = targetNode.getBoundingClientRect();
+                const halfWidth = rect.left + rect.width / 2;
+                if (event.clientX < halfWidth) {
+                    targetNode.parentNode.insertBefore(nodeToInsert, targetNode);
+                } else {
+                    targetNode.parentNode.insertBefore(nodeToInsert, targetNode.nextSibling);
+                }
+                setCaretPosition(nodeToInsert.nextSibling || nodeToInsert, nodeToInsert.nextSibling ? 0 : 1);
+            } else {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                insertNodeAtCaret(nodeToInsert, range);
+            }
+            
+            clearActiveMacro();
+            hideMacroParametersPanel();
+            updateOutput();
+
+            draggedMacro = null;
+
+            saveHistory();
+        });
+
+
+        editableDiv.addEventListener('keydown', (event) => {
+
+            if ((event.ctrlKey || event.metaKey) && (event.key === 'z' || event.key === 'Z')) {
+                event.preventDefault();
+                if (event.shiftKey) {
+                    // Redo
+                    if (historyIndex < historyStack.length - 1) {
+                        historyIndex++;
+                        restoreHistory(historyIndex);
+                    }
+                } else {
+                    // Undo
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        restoreHistory(historyIndex);
+                    }
+                }
+                return false;
+            }
+
+
+            const selection = window.getSelection();
+            if (!selection.rangeCount || !selection.isCollapsed) return;
+            const range = selection.getRangeAt(0);
+            let nodeToDelete = null;
+
+            if (event.key === 'Backspace') {
+                if (range.startOffset === 0) {
+                    let prevNode = range.startContainer.previousSibling;
+                    if (prevNode && prevNode.nodeType === Node.ELEMENT_NODE && prevNode.classList.contains('macro')) {
+                        nodeToDelete = prevNode;
+                    }
+                }
+            } else if (event.key === 'Delete') {
+                if (range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === range.startContainer.length) {
+                    let nextNode = range.startContainer.nextSibling;
+                    if (nextNode && nextNode.nodeType === Node.ELEMENT_NODE && nextNode.classList.contains('macro')) {
+                        nodeToDelete = nextNode;
+                    }
+                } else if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+                     let targetChild = range.startContainer.childNodes[range.startOffset];
+                     if (targetChild && targetChild.nodeType === Node.ELEMENT_NODE && targetChild.classList.contains('macro')) {
+                        nodeToDelete = targetChild;
+                     }
+                }
+            }
+            if (nodeToDelete) {
+                event.preventDefault();
+                removeMacro(nodeToDelete);
+            }
+        });
+
+        editableDiv.addEventListener('click', (event) => {
+            let target = event.target;
+            while (target && target !== editableDiv && !target.classList.contains('macro')) {
+                target = target.parentNode;
+            }
+
+            clearActiveMacro();
+            
+            if (target && target.classList.contains('macro')) {
+                event.stopPropagation();
+                window.getSelection().removeAllRanges();
+                
+                target.classList.add('active');
+                addDeleteIcon(target);
+
+                const macroType = target.dataset.type;
+                const macroDefinition = availableMacros.find(m => m.type === macroType);
+
+                if (macroDefinition) {
+                    if (macroDefinition.parameterized) {
+                        showMacroParametersPanel(macroDefinition, target);
+                    } else {
+                        showMacroInfoPanel(macroDefinition, target);
+                    }
+                }
+            } else {
+                hideMacroParametersPanel();
+            }
+        });
+        
+        document.addEventListener('click', (event) => {
+            const isClickInsidePanel = macroParamsPanel.contains(event.target);
+            const isClickInsideMacroButtons = macroButtonsPanel.contains(event.target);
+            const isClickInsideEditor = editableDiv.contains(event.target);
+
+            if (macroParamsPanel.classList.contains('active') && !isClickInsidePanel && !isClickInsideMacroButtons && !isClickInsideEditor) {
+                hideMacroParametersPanel();
+            }
+        });
+
+        // --- Функции сохранения/получения данных ---
+        function getEditorContent() {
+            let cleanText = '';
+            const macros = [];
+            const childNodes = editableDiv.childNodes;
+
+            childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    cleanText += node.textContent;
+                } else if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('macro')) {
+                    const macroType = node.dataset.type;
+                    let macroParams = {};
+                    try {
+                        macroParams = JSON.parse(node.dataset.params || '{}');
+                    } catch (e) {
+                        console.error("Error parsing macro parameters from data-params:", e);
+                    }
+
+                    macros.push({
+                        type: macroType,
+                        params: macroParams,
+                        offset: cleanText.length
+                    });
+                    
+                    const macroDefinition = availableMacros.find(m => m.type === macroType);
+                    let placeholder = `[[${macroType}]]`;
+                    if (macroDefinition && macroDefinition.parameterized) {
+                         const paramStrings = macroDefinition.params.map(paramDef => {
+                             let value = macroParams[paramDef.name];
+                             if (paramDef.type === 'list') {
+                                 value = (macroParams.items || []).join(',');
+                             } else if (paramDef.type === 'select' || paramDef.type === 'number' || paramDef.type === 'text' || paramDef.type === 'date') {
+                                 // Use value directly for select, number, text, date
+                             } else if (paramDef.type === 'checkbox') {
+                                 value = macroParams[paramDef.name] ? 'true' : 'false';
+                             }
+                             
+                             if (value !== undefined && value !== null && value !== '') {
+                                 return `${paramDef.name}:${value}`;
+                             }
+                             return null;
+                         }).filter(s => s).join(',');
+                         if (paramStrings) {
+                            placeholder = `[[${macroType}:${paramStrings}]]`;
+                         }
+                    }
+                    cleanText += placeholder;
+                }
+            });
+
+            return { cleanText, macros };
+        }
+
+        function updateOutput() {
+            const { cleanText, macros } = getEditorContent();
+            cleanTextOutput.textContent = cleanText;
+            macrosOutput.textContent = JSON.stringify(macros, null, 2);
+        }
+
+        // --- Инициализация ---
+        document.addEventListener('DOMContentLoaded', () => {
+            generateMacroButtons();
+            loadTextWithMacros(editableDiv, initialText, initialMacrosData);
+            updateOutput();
+            saveHistory();
+        });
+
+        editableDiv.addEventListener('input', function() {
+            updateOutput();
+            saveHistory(); // <-- PATCH!
+        });
+        
+
+        // --- CLIPBOARD PATCH START ---
+        editableDiv.addEventListener('copy', function(e) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            const range = selection.getRangeAt(0);
+            const fragment = range.cloneContents();
+            const div = document.createElement('div');
+            div.appendChild(fragment);
+            e.clipboardData.setData('text/html', div.innerHTML);
+            e.clipboardData.setData('text/plain', div.textContent);
+            e.preventDefault();
+        });
+        editableDiv.addEventListener('cut', function(e) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            const range = selection.getRangeAt(0);
+            const fragment = range.cloneContents();
+            const div = document.createElement('div');
+            div.appendChild(fragment);
+            e.clipboardData.setData('text/html', div.innerHTML);
+            e.clipboardData.setData('text/plain', div.textContent);
+            // Удаляем выделенное
+            range.deleteContents();
+            e.preventDefault();
+            saveHistory();
+            updateOutput();
+        });
+        editableDiv.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const html = e.clipboardData.getData('text/html');
+            const text = e.clipboardData.getData('text/plain');
+            
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            let range = selection.getRangeAt(0);
+            
+            range.deleteContents(); // Delete selected content from the editor
+
+            const nodesToPaste = [];
+
+            if (html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const pastedBody = doc.body;
+
+                // Function to process a node and return its sanitized representation
+                function sanitizeNode(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        if (node.textContent.length > 0) {
+                            nodesToPaste.push(document.createTextNode(node.textContent));
+                        }
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.classList.contains('macro')) {
+                            // If it's our macro, recreate it to ensure it's a fresh, valid instance
+                            const macroType = node.dataset.type;
+                            let macroParams = {};
+                            try {
+                                macroParams = JSON.parse(node.dataset.params || '{}');
+                            } catch (error) {
+                                console.warn("Could not parse macro params from pasted HTML:", error);
+                            }
+                            const macroDefinition = availableMacros.find(m => m.type === macroType);
+                            if (macroDefinition) {
+                                nodesToPaste.push(createMacroSpan(macroDefinition, macroParams));
+                            } else {
+                                // Fallback for unrecognized macro-like elements (treat as plain text)
+                                if (node.textContent.length > 0) {
+                                    nodesToPaste.push(document.createTextNode(node.textContent));
+                                }
+                            }
+                        } else {
+                            // For any other HTML element, just get its full text content, ignoring its internal structure
+                            if (node.textContent.length > 0) {
+                                nodesToPaste.push(document.createTextNode(node.textContent));
+                            }
+                        }
+                    }
+                    // Do not recursively call for children here. The main loop will handle top-level children.
+                }
+
+                // Iterate through the top-level children of the pasted body
+                Array.from(pastedBody.childNodes).forEach(sanitizeNode);
+
+            } else if (text) {
+                // If only plain text is available, insert it directly
+                nodesToPaste.push(document.createTextNode(text));
+            }
+            
+            // Insert each sanitized node sequentially at the current caret position
+            nodesToPaste.forEach(node => {
+                range.insertNode(node);
+                range.setStartAfter(node); // Move the start of the range after the inserted node
+                range.setEndAfter(node);   // Move the end of the range after the inserted node
+            });
+            
+            // Update the selection to reflect the new range
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            saveHistory();
+            updateOutput();
+        });
+        // --- CLIPBOARD PATCH END ---
+    </script>
+</body>
+</html>
